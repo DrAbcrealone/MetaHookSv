@@ -377,6 +377,9 @@
     <ClCompile Include="..\..\include\SourceSDK\mathlib\sse.cpp">
       <Filter>SourceSDK\mathlib</Filter>
     </ClCompile>
+    <ClCompile Include="libcurl.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exportfuncs.h">
@@ -741,6 +744,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\SourceSDK\vstdlib\vstdlib.h">
       <Filter>SourceSDK\vstdlib</Filter>
+    </ClInclude>
+    <ClInclude Include="libcurl.h">
+      <Filter>Header</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -260,6 +260,7 @@
     <ClCompile Include="BaseUI.cpp" />
     <ClCompile Include="exportfuncs.cpp" />
     <ClCompile Include="GameUI.cpp" />
+    <ClCompile Include="libcurl.cpp" />
     <ClCompile Include="SCModelDatabase.cpp">
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">stdcpp20</LanguageStandard>
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdcpp20</LanguageStandard>
@@ -386,6 +387,7 @@
     <ClInclude Include="..\..\include\vgui_controls\WizardPanel.h" />
     <ClInclude Include="..\..\include\vgui_controls\WizardSubPanel.h" />
     <ClInclude Include="exportfuncs.h" />
+    <ClInclude Include="libcurl.h" />
     <ClInclude Include="SCModelDatabase.h" />
     <ClInclude Include="UtilAssetsIntegrity.h" />
     <ClInclude Include="UtilHTTPClient.h" />

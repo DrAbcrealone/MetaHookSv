@@ -1,7 +1,6 @@
 #include <metahook.h>
 #include <studio.h>
 #include <r_studioint.h>
-#include <capstone.h>
 #include <cl_entity.h>
 #include <com_model.h>
 #include <cvardef.h>
@@ -15,6 +14,7 @@
 
 cvar_t *scmodel_autodownload = NULL;
 cvar_t *scmodel_downloadlatest = NULL;
+cvar_t* scmodel_maxretry = NULL;
 
 cl_enginefunc_t gEngfuncs;
 engine_studio_api_t IEngineStudio;
@@ -82,7 +82,6 @@ void HUD_Frame(double frame)
 	gExportfuncs.HUD_Frame(frame);
 
 	SCModelDatabase()->RunFrame();
-	UtilHTTPClient()->RunFrame();
 }
 
 void HUD_Init(void)
@@ -92,6 +91,8 @@ void HUD_Init(void)
 	scmodel_autodownload = gEngfuncs.pfnRegisterVariable("scmodel_autodownload", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
 
 	scmodel_downloadlatest = gEngfuncs.pfnRegisterVariable("scmodel_downloadlatest", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
+
+	scmodel_maxretry = gEngfuncs.pfnRegisterVariable("scmodel_maxretry", "3", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
 
 	gEngfuncs.pfnAddCommand("scmodel_reload", SCModel_Reload_f);
 
