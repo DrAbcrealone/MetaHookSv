@@ -123,6 +123,89 @@ public:
 	}
 };
 
+enum DOWNLOAD_TASK_TYPE
+{
+	INVALID,
+	MDL,
+	BMP
+};
+class CSCMDLDownlaodTask : public BaseQueryTask {
+public:
+	std::string m_szUrl = "";
+	std::string m_szSaveFileName = "";
+	std::string m_szModelName = "";
+
+	DOWNLOAD_TASK_TYPE m_iType = INVALID;
+
+	CSCMDLDownlaodTask* m_pNext = nullptr;
+
+	void SaveToDisk(const char* data, size_t size) {
+		LOG_DEVELOPER("File \"{}\" acquired!", m_szModelName);
+		switch (m_iType)
+		{
+		case MDL: {
+			if (UtilAssetsIntegrityCheckReason::OK != UtilAssetsIntegrity()->CheckStudioModel(data, size, NULL)) {
+				LOG_DEVELOPER("File \"{}\" is corrupted!\n", m_szModelName);
+				return;
+			}
+			break;
+		}
+		case BMP: {
+			if (UtilAssetsIntegrityCheckReason::OK != UtilAssetsIntegrity()->Check8bitBMP(data, size, NULL)) {
+				LOG_DEVELOPER("File \"{}\" is corrupted!\n", m_szModelName);
+				return;
+			}
+		}
+		case INVALID:
+		default: {
+			LOG_DEVELOPER("Invalid Request in \"{}\"!\n", m_szModelName);
+			return;
+		}
+		}
+
+		FILESYSTEM_ANY_CREATEDIR("models", "GAMEDOWNLOAD");
+		FILESYSTEM_ANY_CREATEDIR("models/player", "GAMEDOWNLOAD");
+
+		std::string filePathDir = std::format("models/player/{0}", m_szModelName);
+		FILESYSTEM_ANY_CREATEDIR(filePathDir.c_str(), "GAMEDOWNLOAD");
+
+		std::string filePath = std::format("models/player/{0}/{1}", m_szModelName, m_szSaveFileName);
+		auto FileHandle = FILESYSTEM_ANY_OPEN(filePath.c_str(), "wb", "GAMEDOWNLOAD");
+
+		if (FileHandle)
+		{
+			FILESYSTEM_ANY_WRITE(data, size, FileHandle);
+			FILESYSTEM_ANY_CLOSE(FileHandle);
+		}
+	}
+
+	virtual void StartQuery() override {
+		CHTTPRequest::Create(m_szUrl.c_str())->
+			OnFailed([](void* user) {
+			CSCMDLDownlaodTask* pThis = reinterpret_cast<CSCMDLDownlaodTask*>(user);
+			pThis->m_iRetry++;
+			if (pThis->m_iRetry >= scmodel_maxretry->value) {
+				LOG_DEVELOPER("Attempts to fetch model ({}) have reached the maximum number of retries and will be aborted.", pThis->m_szModelName);
+				return;
+			}
+			else {
+				LOG_DEVELOPER("Attempts to fetch model ({}) Metadata failed, started retry. {}/{}", pThis->m_szModelName, pThis->m_iRetry, (int)scmodel_maxretry->value);
+				pThis->StartQuery();
+			}
+				}, this)->
+			OnResponed([](CHTTPPayload* payload, void* user) {
+					CSCMDLDownlaodTask* pThis = reinterpret_cast<CSCMDLDownlaodTask*>(user);
+					if (pThis->m_pNext != nullptr)
+						pThis->m_pNext->StartQuery();
+				}, this)->
+					ContinueWith([](CHTTPRespond* payload, void* user) {
+					CSCMDLDownlaodTask* pThis = reinterpret_cast<CSCMDLDownlaodTask*>(user);
+					pThis->SaveToDisk(payload->m_pPayload->m_pData, payload->m_pPayload->m_iSize);
+						}, this)->
+					Start();
+	}
+};
+
 class CSCModelJsonQueryTask : public BaseQueryTask {
 public:
 	int m_iRepoId = 0;
@@ -184,6 +267,16 @@ public:
 		m_bHasTModel = bHasTModel;
 
 		LOG_DEVELOPER(" Json for model \"{}\" acquired!", m_szModel);
+
+		//Start download mdl
+		if (!m_szNetworkFileNameBase.empty())
+		{
+			//MDL
+
+			//T MDL
+
+			//BMP
+		}
 	}
 	virtual void StartQuery() override{
 		m_szLowerName = m_szModel;
@@ -212,88 +305,7 @@ public:
 	}
 };
 
-enum DOWNLOAD_TASK_TYPE
-{
-	INVALID,
-	MDL,
-	BMP
-};
-class CSCMDLDownlaodTask : public BaseQueryTask {
-public:
-	std::string m_szUrl = "";
-	std::string m_szSaveFileName = "";
-	std::string m_szModelName = "";
 
-	DOWNLOAD_TASK_TYPE m_iType = INVALID;
-
-	CSCMDLDownlaodTask* m_pNext = nullptr;
-
-	void SaveToDisk(const char* data, size_t size) {
-		LOG_DEVELOPER("File \"{}\" acquired!", m_szModelName);
-		switch (m_iType)
-		{
-			case MDL: {
-				if (UtilAssetsIntegrityCheckReason::OK != UtilAssetsIntegrity()->CheckStudioModel(data, size, NULL)){
-					LOG_DEVELOPER("File \"{}\" is corrupted!\n", m_szModelName);
-					return;
-				}
-				break;
-			}
-			case BMP: {
-				if (UtilAssetsIntegrityCheckReason::OK != UtilAssetsIntegrity()->Check8bitBMP(data, size, NULL)){
-					LOG_DEVELOPER("File \"{}\" is corrupted!\n", m_szModelName);
-					return;
-				}
-			}
-			case INVALID:
-			default: {
-				LOG_DEVELOPER("Invalid Request in \"{}\"!\n", m_szModelName);
-				return;
-			}
-		}
-
-		FILESYSTEM_ANY_CREATEDIR("models", "GAMEDOWNLOAD");
-		FILESYSTEM_ANY_CREATEDIR("models/player", "GAMEDOWNLOAD");
-
-		std::string filePathDir = std::format("models/player/{0}", m_szModelName);
-		FILESYSTEM_ANY_CREATEDIR(filePathDir.c_str(), "GAMEDOWNLOAD");
-
-		std::string filePath = std::format("models/player/{0}/{1}", m_szModelName, m_szSaveFileName);
-		auto FileHandle = FILESYSTEM_ANY_OPEN(filePath.c_str(), "wb", "GAMEDOWNLOAD");
-
-		if (FileHandle)
-		{
-			FILESYSTEM_ANY_WRITE(data, size, FileHandle);
-			FILESYSTEM_ANY_CLOSE(FileHandle);
-		}
-	}
-
-	virtual void StartQuery() override {
-		CHTTPRequest::Create(m_szUrl.c_str())->
-			OnFailed([](void* user) {
-				CSCMDLDownlaodTask* pThis = reinterpret_cast<CSCMDLDownlaodTask*>(user);
-				pThis->m_iRetry++;
-				if (pThis->m_iRetry >= scmodel_maxretry->value) {
-					LOG_DEVELOPER("Attempts to fetch model ({}) have reached the maximum number of retries and will be aborted.", pThis->m_szModelName);
-					return;
-				}
-				else {
-					LOG_DEVELOPER("Attempts to fetch model ({}) Metadata failed, started retry. {}/{}", pThis->m_szModelName, pThis->m_iRetry, (int)scmodel_maxretry->value);
-					pThis->StartQuery();
-				}
-				}, this)->
-			OnResponed([](CHTTPPayload* payload, void* user) {
-				CSCMDLDownlaodTask* pThis = reinterpret_cast<CSCMDLDownlaodTask*>(user);
-				if (pThis->m_pNext != nullptr)
-					pThis->m_pNext->StartQuery();
-			}, this)->
-			ContinueWith([](CHTTPRespond* payload, void* user) {
-				CSCMDLDownlaodTask* pThis = reinterpret_cast<CSCMDLDownlaodTask*>(user);
-				pThis->SaveToDisk(payload->m_pPayload->m_pData, payload->m_pPayload->m_iSize);
-			}, this)->
-			Start();
-	}
-};
 
 
 ISCModelDatabase* SCModelDatabase()
